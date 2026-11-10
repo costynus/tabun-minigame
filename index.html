@@ -1,0 +1,1643 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,minimum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#F2EBDD">
+<meta name="format-detection" content="telephone=no">
+<title>Табун</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+:root{
+  --paper:#F2EBDD; --paper-2:#E6DCC7; --ink:#1A1A1A; --red:#B5322A;
+  --sat:0px; --sab:0px; --sal:0px; --sar:0px;
+  --top:max(env(safe-area-inset-top),var(--sat));
+  --bot:max(env(safe-area-inset-bottom),var(--sab));
+  --lft:max(env(safe-area-inset-left),var(--sal));
+  --rgt:max(env(safe-area-inset-right),var(--sar));
+  --font:system-ui,-apple-system,"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif;
+}
+:root.dark{ --paper:#16140F; --paper-2:#24201A; --ink:#EDE4D3; }
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--paper);color:var(--ink);font-family:var(--font);
+  overscroll-behavior:none;touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;
+  -webkit-tap-highlight-color:transparent;-webkit-text-size-adjust:100%}
+#c{position:fixed;left:0;top:0;width:100%;height:100%;display:block;touch-action:none}
+#probe{position:fixed;left:0;top:0;width:1px;height:var(--top);visibility:hidden;pointer-events:none}
+#hud{position:fixed;left:0;right:0;top:0;z-index:2;display:none;align-items:center;gap:10px;pointer-events:none;
+  padding:calc(var(--top) + 10px) calc(var(--rgt) + 12px) 0 calc(var(--lft) + 12px)}
+#hud.on{display:flex}
+#lvl{font-weight:900;font-size:15px;letter-spacing:.08em;text-transform:uppercase;white-space:nowrap;background:var(--paper);
+  border:2.5px solid var(--ink);padding:5px 8px;line-height:1}
+#prog{flex:1;height:14px;border:2.5px solid var(--ink);background:var(--paper);position:relative;overflow:hidden}
+#prog i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--ink)}
+.ib{pointer-events:auto;flex:none;width:42px;height:42px;padding:0;border:2.5px solid var(--ink);background:var(--paper);color:var(--ink);
+  display:grid;place-items:center;cursor:pointer}
+.ib:active{background:var(--paper-2)}
+.ib svg{width:22px;height:22px;display:block}
+.screen{position:fixed;inset:0;z-index:3;display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;
+  padding:calc(var(--top) + 20px) calc(var(--rgt) + 20px) calc(var(--bot) + 24px) calc(var(--lft) + 20px)}
+.screen.on{display:flex}
+#start{justify-content:space-between}
+.title{margin:3vh 0 0;font-weight:900;font-size:min(27vw,150px);line-height:.86;letter-spacing:.02em;text-transform:uppercase}
+.rule{height:6px;background:var(--ink);width:min(68vw,360px);margin:14px auto 10px}
+.sub{margin:0;font-weight:800;font-size:16px;letter-spacing:.07em;text-transform:uppercase}
+.bottom{display:flex;flex-direction:column;align-items:center;background:var(--paper);border:3px solid var(--ink);padding:16px 22px 12px}
+.btn{font:inherit;font-weight:900;font-size:20px;letter-spacing:.1em;text-transform:uppercase;min-width:200px;margin:10px 0;padding:15px 34px;
+  background:var(--ink);color:var(--paper);border:0;outline:3px solid var(--ink);outline-offset:4px;cursor:pointer}
+.btn:active{transform:translate(1px,2px)}
+.btn.ghost{background:var(--paper);color:var(--ink);outline:0;border:3px solid var(--ink);margin-top:14px}
+.rec{margin:10px 0 0;font-weight:800;font-size:13px;letter-spacing:.09em;text-transform:uppercase}
+.card{width:min(86vw,360px);background:var(--paper);border:4px solid var(--ink);padding:22px 22px 20px;display:flex;flex-direction:column;align-items:center}
+.cap{font-weight:800;font-size:13px;letter-spacing:.12em;text-transform:uppercase}
+.big-l{font-weight:900;font-size:27px;letter-spacing:.05em;text-transform:uppercase;margin:8px 0 0}
+.num{font-weight:900;font-size:min(22vw,96px);line-height:1;margin:6px 0 0}
+.unit{font-weight:800;font-size:18px;letter-spacing:.1em;text-transform:uppercase;margin:4px 0 6px}
+.newrec{display:none;border:2.5px solid var(--ink);padding:4px 8px;font-weight:900;font-size:13px;letter-spacing:.1em;text-transform:uppercase;margin:6px 0 4px}
+.newrec.on{display:inline-block}
+.plate-red{width:100%;background:var(--red);color:#F2EBDD;font-weight:900;font-size:26px;line-height:1.1;letter-spacing:.06em;text-transform:uppercase;padding:16px 12px;margin-bottom:12px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="probe"></div>
+
+<div id="hud">
+  <div id="lvl">Ур. 1</div>
+  <div id="prog"><i></i></div>
+  <button class="ib" id="bSnd" aria-label="Звук"></button>
+  <button class="ib" id="bPause" aria-label="Пауза">
+    <svg viewBox="0 0 24 24"><rect x="5" y="4" width="5" height="16" fill="currentColor"/><rect x="14" y="4" width="5" height="16" fill="currentColor"/></svg>
+  </button>
+</div>
+
+<div id="start" class="screen on">
+  <div>
+    <h1 class="title">Табун</h1>
+    <div class="rule"></div>
+    <p class="sub">Доведи табун до водопоя</p>
+  </div>
+  <div class="bottom">
+    <button class="btn" id="bGo">В путь</button>
+    <p class="rec" id="startRec">Рекорд: 0</p>
+  </div>
+</div>
+
+<div id="pause" class="screen">
+  <div class="card">
+    <div class="big-l">Пауза</div>
+    <button class="btn" id="bResume" style="margin-top:22px">Дальше</button>
+    <button class="btn ghost" id="bMenu">В меню</button>
+  </div>
+</div>
+
+<div id="result" class="screen">
+  <div class="card">
+    <div class="cap" id="resCap">Уровень 1 пройден</div>
+    <div class="big-l">У водопоя:</div>
+    <div class="num" id="resNum">0</div>
+    <div class="unit" id="resUnit">голов</div>
+    <div class="newrec" id="resNew">Новый рекорд</div>
+    <p class="rec" id="resRec">Рекорд: 0</p>
+    <button class="btn" id="bNext" style="margin-top:20px">Дальше</button>
+  </div>
+</div>
+
+<div id="lose" class="screen">
+  <div class="card">
+    <div class="plate-red">Табун рассеялся</div>
+    <div class="cap" id="loseCap">Уровень 1</div>
+    <button class="btn" id="bRetry" style="margin-top:22px">Ещё раз</button>
+    <button class="btn ghost" id="bMenu2">В меню</button>
+  </div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* =====================================================================
+   ТАБУН — Crowd/Multiplier Runner. Один файл, Canvas 2D, без библиотек.
+   Модули: Telegram, Storage, Theme, Audio, HorseSprites, LevelGenerator,
+           Herd, FX, Renderer, Input, UI, Game.
+   ===================================================================== */
+
+const TAU = Math.PI * 2;
+const W = 6;          // полуширина дороги (мировые единицы)
+const CAMD = 14;      // расстояние камеры позади табуна
+const MAXV = 200;     // максимум рисуемых лошадей
+const STEP = 1 / 60;  // фиксированный шаг логики
+const ES = 5;         // скорость чужого табуна навстречу
+const FONT = 'system-ui,-apple-system,"Segoe UI","Helvetica Neue",Helvetica,Arial,sans-serif';
+
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+function mulberry32(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+function h1(i) { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x); }
+function fmt(n) { return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, '\u202F'); }
+function plural(n, f) {
+  const a = n % 10, b = n % 100;
+  if (a === 1 && b !== 11) return f[0];
+  if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return f[1];
+  return f[2];
+}
+function applyOp(o, n) {
+  switch (o.op) {
+    case '+': return n + o.val;
+    case '×': return n * o.val;
+    case '−': return Math.max(0, n - o.val);
+    case '÷': return Math.ceil(n / o.val);
+  }
+  return n;
+}
+function jit(rnd, n) { const a = new Float32Array(n); for (let i = 0; i < n; i++) a[i] = rnd() * 2 - 1; return a; }
+
+/* ============================ Telegram ============================ */
+const Telegram = {
+  tg: null, inTg: false,
+  init() {
+    const tg = window.Telegram && window.Telegram.WebApp;
+    if (!tg) return;
+    this.tg = tg;
+    this.inTg = !!tg.initData || (!!tg.platform && tg.platform !== 'unknown');
+    if (!this.inTg) return;
+    try { tg.ready(); } catch (e) {}
+    try { tg.expand(); } catch (e) {}
+    try { if (this.ver('7.7') && tg.disableVerticalSwipes) tg.disableVerticalSwipes(); } catch (e) {}
+    const on = (ev, fn) => { try { tg.onEvent(ev, fn); } catch (e) {} };
+    on('themeChanged', () => Theme.fromTelegram());
+    on('viewportChanged', () => Renderer.resize());
+    on('safeAreaChanged', () => this.insets());
+    on('contentSafeAreaChanged', () => this.insets());
+    this.insets();
+  },
+  ver(v) { try { return !!this.tg && this.tg.isVersionAtLeast(v); } catch (e) { return false; } },
+  insets() {
+    if (!this.inTg) return;
+    const a = this.tg.safeAreaInset || {}, b = this.tg.contentSafeAreaInset || {};
+    const st = document.documentElement.style;
+    st.setProperty('--sat', ((a.top || 0) + (b.top || 0)) + 'px');
+    st.setProperty('--sab', ((a.bottom || 0) + (b.bottom || 0)) + 'px');
+    st.setProperty('--sal', ((a.left || 0) + (b.left || 0)) + 'px');
+    st.setProperty('--sar', ((a.right || 0) + (b.right || 0)) + 'px');
+    Renderer.resize();
+  },
+  dark() { return this.inTg && this.tg.colorScheme === 'dark'; },
+  haptic(kind) {
+    if (!this.inTg || !this.ver('6.1')) return;
+    try {
+      const h = this.tg.HapticFeedback;
+      if (kind === 'success' || kind === 'error') h.notificationOccurred(kind);
+      else h.impactOccurred(kind);
+    } catch (e) {}
+  },
+  colors() {
+    if (!this.inTg) return;
+    try {
+      if (this.ver('6.9')) { this.tg.setHeaderColor(Theme.c.paper); this.tg.setBackgroundColor(Theme.c.paper); }
+      if (this.ver('7.10') && this.tg.setBottomBarColor) this.tg.setBottomBarColor(Theme.c.paper);
+    } catch (e) {}
+  }
+};
+
+/* ============================ Storage ============================ */
+const Storage = {
+  KEY: 'tabun_save_v1',
+  data: { level: 1, best: 0, muted: false },
+  cloud() {
+    return Telegram.inTg && Telegram.ver('6.9') && Telegram.tg.CloudStorage ? Telegram.tg.CloudStorage : null;
+  },
+  merge(d) {
+    if (!d || typeof d !== 'object') return;
+    if (Number.isFinite(d.level)) this.data.level = Math.max(this.data.level, Math.floor(d.level));
+    if (Number.isFinite(d.best)) this.data.best = Math.max(this.data.best, Math.floor(d.best));
+    if (typeof d.muted === 'boolean') this.data.muted = d.muted;
+  },
+  load(cb) {
+    try { this.merge(JSON.parse(localStorage.getItem(this.KEY) || 'null')); } catch (e) {}
+    const cs = this.cloud();
+    if (!cs) { cb(); return; }
+    let done = false;
+    const fin = () => { if (!done) { done = true; cb(); } };
+    const timer = setTimeout(fin, 1500);
+    try {
+      cs.getItem(this.KEY, (err, val) => {
+        clearTimeout(timer);
+        if (!err && val) { try { this.merge(JSON.parse(val)); } catch (e) {} }
+        fin();
+      });
+    } catch (e) { clearTimeout(timer); fin(); }
+  },
+  save() {
+    const s = JSON.stringify(this.data);
+    try { localStorage.setItem(this.KEY, s); } catch (e) {}
+    const cs = this.cloud();
+    if (cs) { try { cs.setItem(this.KEY, s, () => {}); } catch (e) {} }
+  }
+};
+
+/* ============================ Theme ============================ */
+const Theme = {
+  c: {}, dark: false, ready: false,
+  read() {
+    const cs = getComputedStyle(document.documentElement);
+    const g = k => cs.getPropertyValue(k).trim();
+    this.c = { paper: g('--paper'), paper2: g('--paper-2'), ink: g('--ink'), red: g('--red') };
+  },
+  set(dark) {
+    this.dark = dark;
+    document.documentElement.classList.toggle('dark', dark);
+    this.read();
+    const m = document.querySelector('meta[name="theme-color"]');
+    if (m) m.setAttribute('content', this.c.paper);
+    if (this.ready) { HorseSprites.build(); Renderer.buildStatic(); }
+    Telegram.colors();
+  },
+  fromTelegram() { this.set(Telegram.dark()); }
+};
+
+/* ============================ Audio (WebAudio synth) ============================ */
+const Audio = {
+  ctx: null, master: null, noise: null, muted: false, next: 0,
+  unlock() {
+    if (!this.ctx) {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return;
+      try { this.ctx = new AC(); } catch (e) { return; }
+      this.master = this.ctx.createGain();
+      this.master.gain.value = this.muted ? 0 : 0.7;
+      this.master.connect(this.ctx.destination);
+      const len = this.ctx.sampleRate;
+      const b = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+      const d = b.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+      this.noise = b;
+    }
+    if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+  },
+  suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend().catch(() => {}); },
+  setMuted(m) {
+    this.muted = m;
+    if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.7, this.ctx.currentTime, 0.02);
+  },
+  ok() { return this.ctx && this.ctx.state === 'running' && !this.muted; },
+  env(node, t, a, peak, d) {
+    const gn = this.ctx.createGain();
+    gn.gain.setValueAtTime(0.0001, t);
+    gn.gain.exponentialRampToValueAtTime(peak, t + a);
+    gn.gain.exponentialRampToValueAtTime(0.0001, t + a + d);
+    node.connect(gn); gn.connect(this.master);
+    return gn;
+  },
+  noiseBurst(t, type, freq, q, peak, dur) {
+    const n = this.ctx.createBufferSource(); n.buffer = this.noise;
+    const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; if (q) f.Q.value = q;
+    n.connect(f); this.env(f, t, 0.003, peak, dur);
+    n.start(t, Math.random() * 0.5, dur + 0.05);
+    return f;
+  },
+  thump(t, v) {
+    const o = this.ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(120, t); o.frequency.exponentialRampToValueAtTime(42, t + 0.12);
+    this.env(o, t, 0.004, v, 0.14); o.start(t); o.stop(t + 0.22);
+    this.noiseBurst(t, 'lowpass', 520, 0, v * 0.45, 0.05);
+  },
+  hooves(n, slow) {
+    if (!this.ok() || n <= 0) { this.next = 0; return; }
+    const c = this.ctx.currentTime;
+    if (this.next < c) this.next = c + 0.05;
+    if (this.next - c < 0.12) {
+      const iv = clamp(0.64 - 0.075 * Math.log2(n + 1), 0.3, 0.6) * (slow ? 1.3 : 1);
+      const v = clamp(0.16 + Math.log10(n + 1) * 0.12, 0.16, 0.5);
+      const t = this.next;
+      this.thump(t, v * 0.65); this.thump(t + iv * 0.17, v * 0.5); this.thump(t + iv * 0.34, v);
+      this.next += iv;
+    }
+  },
+  neigh() {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type = 'sawtooth';
+    o.frequency.setValueAtTime(600, t);
+    o.frequency.linearRampToValueAtTime(980, t + 0.07);
+    o.frequency.linearRampToValueAtTime(720, t + 0.34);
+    const l = this.ctx.createOscillator(); l.frequency.value = 22;
+    const lg = this.ctx.createGain(); lg.gain.value = 75; l.connect(lg); lg.connect(o.frequency);
+    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 2.2;
+    o.connect(f); this.env(f, t, 0.02, 0.22, 0.34);
+    o.start(t); l.start(t); o.stop(t + 0.42); l.stop(t + 0.42);
+  },
+  thud() {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type = 'sine';
+    o.frequency.setValueAtTime(95, t); o.frequency.exponentialRampToValueAtTime(30, t + 0.3);
+    this.env(o, t, 0.005, 0.8, 0.32); o.start(t); o.stop(t + 0.4);
+    this.noiseBurst(t, 'lowpass', 200, 0, 0.5, 0.16);
+  },
+  hit() {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime;
+    this.noiseBurst(t, 'bandpass', 900, 1.2, 0.45, 0.12);
+    this.thump(t, 0.6);
+  },
+  step(k) {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime;
+    const o = this.ctx.createOscillator(); o.type = 'triangle';
+    o.frequency.value = 330 * Math.pow(2, (k - 1) * 4 / 12);
+    this.env(o, t, 0.01, 0.2, 0.25); o.start(t); o.stop(t + 0.3);
+  },
+  splash() {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime;
+    const n = this.ctx.createBufferSource(); n.buffer = this.noise;
+    const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+    f.frequency.setValueAtTime(3000, t); f.frequency.exponentialRampToValueAtTime(420, t + 0.7);
+    n.connect(f); this.env(f, t, 0.01, 0.5, 0.8); n.start(t, 0, 0.9);
+    [261.63, 329.63, 392.0, 523.25].forEach((fr, i) => {
+      const o = this.ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = fr;
+      const s = t + 0.25 + i * 0.1;
+      this.env(o, s, 0.02, 0.13, 1.4); o.start(s); o.stop(s + 1.5);
+    });
+  },
+  fail() {
+    if (!this.ok()) return;
+    const t = this.ctx.currentTime;
+    [392, 311.1, 233.1].forEach((fr, i) => {
+      const o = this.ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = fr;
+      const s = t + i * 0.2;
+      this.env(o, s, 0.01, 0.16, 0.3); o.start(s); o.stop(s + 0.35);
+    });
+  }
+};
+
+/* ============================ Horse sprites ============================ */
+// Процедурные силуэты: вид сзади (свой табун), спереди (чужой), сбоку (заставка).
+const HorseSprites = {
+  N: 128, rear: [], front: [], side: [],
+  build() {
+    const c = Theme.c;
+    this.rear = [0, 1, 2, 3].map(f => this.make(g => this.drawRear(g, f, c.ink, c.paper)));
+    this.front = [0, 1, 2, 3].map(f => this.make(g => this.drawFront(g, f, c.red, c.paper)));
+    this.side = [0, 1, 2, 3].map(f => this.make(g => this.drawSide(g, f, c.ink, c.paper)));
+  },
+  make(fn) {
+    const cv = document.createElement('canvas');
+    cv.width = cv.height = this.N;
+    const g = cv.getContext('2d');
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    fn(g);
+    return cv;
+  },
+  blob(g, cx, cy, rx, ry, rnd, amp) {
+    const n = 26;
+    g.beginPath();
+    for (let i = 0; i < n; i++) {
+      const a = i / n * TAU, j = (rnd() - 0.5) * 2 * amp;
+      const x = cx + Math.cos(a) * (rx + j), y = cy + Math.sin(a) * (ry + j);
+      if (i) g.lineTo(x, y); else g.moveTo(x, y);
+    }
+    g.closePath();
+  },
+  vleg(g, x, top, down, ground, inward) {
+    const end = down ? ground : ground - 17;
+    const kx = down ? x : x + inward * 3, ky = (top + end) / 2 + 2;
+    const hx = down ? x : x + inward * 6;
+    g.lineWidth = 7.5; g.beginPath(); g.moveTo(x, top); g.lineTo(kx, ky); g.stroke();
+    g.lineWidth = 5.5; g.beginPath(); g.moveTo(kx, ky); g.lineTo(hx, end); g.stroke();
+    g.fillRect(hx - 3.6, end - 3, 7.2, 4);
+  },
+  sleg(g, x, y, a1, a2, l1, l2, ground) {
+    const kx = x + Math.sin(a1) * l1, ky = y + Math.cos(a1) * l1;
+    const a = a1 + a2;
+    const hx = kx + Math.sin(a) * l2, hy = Math.min(ground, ky + Math.cos(a) * l2);
+    g.lineWidth = 7; g.beginPath(); g.moveTo(x, y); g.lineTo(kx, ky); g.stroke();
+    g.lineWidth = 5; g.beginPath(); g.moveTo(kx, ky); g.lineTo(hx, hy); g.stroke();
+    g.beginPath(); g.arc(hx, hy - 1, 3.2, 0, TAU); g.fill();
+  },
+  drawRear(g, f, ink, paper) {
+    const rnd = mulberry32(77 + f * 13), bob = [0, -3, -5, -2][f];
+    const L = [[1, 1, 0, 0], [1, 0, 0, 1], [0, 0, 1, 1], [0, 1, 1, 0]][f];
+    g.save(); g.translate(0, bob);
+    const gr = 124 - bob;
+    g.fillStyle = ink; g.strokeStyle = ink;
+    this.vleg(g, 57, 80, L[2], gr, 1); this.vleg(g, 71, 80, L[3], gr, -1);
+    // шея и голова
+    g.beginPath(); g.moveTo(54, 56); g.quadraticCurveTo(56, 34, 59, 24); g.lineTo(69, 24); g.quadraticCurveTo(72, 34, 74, 56); g.closePath(); g.fill();
+    this.blob(g, 64, 20, 8.5, 10, rnd, 0.9); g.fill();
+    g.beginPath(); g.moveTo(56, 15); g.lineTo(57.5, 3); g.lineTo(62, 12); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(66, 12); g.lineTo(70.5, 3); g.lineTo(72, 15); g.closePath(); g.fill();
+    // грива
+    const mw = [0, 2, 4, 2][f];
+    g.lineWidth = 3;
+    for (let i = 0; i < 4; i++) {
+      g.beginPath(); g.moveTo(67, 22 + i * 7);
+      g.quadraticCurveTo(74 + mw, 24 + i * 7, 78 + mw + i, 31 + i * 7); g.stroke();
+    }
+    // спина
+    this.blob(g, 64, 58, 20, 15, rnd, 1); g.fill();
+    // задние ноги
+    this.vleg(g, 47, 88, L[0], gr, 1); this.vleg(g, 81, 88, L[1], gr, -1);
+    // круп
+    this.blob(g, 52, 76, 17, 16, rnd, 1); g.fill();
+    this.blob(g, 76, 76, 17, 16, rnd, 1); g.fill();
+    this.blob(g, 64, 86, 20, 8, rnd, 0.8); g.fill();
+    // хвост
+    const sw = [-5, -1, 5, 1][f];
+    g.lineWidth = 8; g.beginPath(); g.moveTo(64, 64); g.quadraticCurveTo(64 + sw * 0.4, 86, 64 + sw, 108); g.stroke();
+    g.lineWidth = 3;
+    g.beginPath(); g.moveTo(64, 90); g.quadraticCurveTo(62 + sw, 104, 59 + sw * 1.3, 113); g.stroke();
+    g.beginPath(); g.moveTo(64, 90); g.quadraticCurveTo(66 + sw, 104, 69 + sw * 1.3, 112); g.stroke();
+    // вырезанные светлые штрихи
+    g.strokeStyle = paper; g.lineWidth = 1.8;
+    g.beginPath(); g.arc(50, 74, 10, 3.5, 4.6); g.stroke();
+    g.beginPath(); g.arc(78, 74, 10, 4.8, 5.9); g.stroke();
+    g.beginPath(); g.moveTo(59.5, 66); g.quadraticCurveTo(59.5 + sw * 0.4, 84, 59.5 + sw * 0.8, 95); g.stroke();
+    g.beginPath(); g.moveTo(68.5, 66); g.quadraticCurveTo(68.5 + sw * 0.4, 84, 68.5 + sw * 0.8, 95); g.stroke();
+    g.lineWidth = 1.4;
+    g.beginPath(); g.moveTo(64, 45); g.lineTo(64, 53); g.stroke();
+    g.beginPath(); g.moveTo(61, 30); g.lineTo(60, 44); g.stroke();
+    g.restore();
+  },
+  drawFront(g, f, col, paper) {
+    const rnd = mulberry32(311 + f * 7), bob = [0, -3, -5, -2][f];
+    const L = [[1, 1, 0, 0], [1, 0, 0, 1], [0, 0, 1, 1], [0, 1, 1, 0]][f];
+    g.save(); g.translate(0, bob);
+    const gr = 124 - bob;
+    g.fillStyle = col; g.strokeStyle = col;
+    this.vleg(g, 46, 84, L[0], gr - 6, 1); this.vleg(g, 82, 84, L[1], gr - 6, -1);
+    this.blob(g, 64, 70, 22, 15, rnd, 1); g.fill();
+    this.blob(g, 64, 82, 18, 13, rnd, 1); g.fill();
+    this.vleg(g, 56, 90, L[2], gr, 1); this.vleg(g, 72, 90, L[3], gr, -1);
+    this.blob(g, 64, 56, 13, 15, rnd, 0.8); g.fill();
+    this.blob(g, 64, 44, 10, 19, rnd, 0.8); g.fill();
+    g.beginPath(); g.moveTo(55, 31); g.lineTo(52, 14); g.lineTo(60, 26); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(68, 26); g.lineTo(76, 14); g.lineTo(73, 31); g.closePath(); g.fill();
+    const mw = [0, 2, 3, 1][f];
+    g.lineWidth = 3;
+    g.beginPath(); g.moveTo(62, 26); g.quadraticCurveTo(58 - mw, 30, 57 - mw, 36); g.stroke();
+    g.beginPath(); g.moveTo(66, 26); g.quadraticCurveTo(71 + mw, 30, 72 + mw, 36); g.stroke();
+    g.strokeStyle = paper; g.fillStyle = paper;
+    g.lineWidth = 3; g.beginPath(); g.moveTo(64, 31); g.lineTo(64, 53); g.stroke();
+    g.lineWidth = 1.6;
+    g.beginPath(); g.arc(59.5, 60, 2.2, 0, TAU); g.stroke();
+    g.beginPath(); g.arc(68.5, 60, 2.2, 0, TAU); g.stroke();
+    g.beginPath(); g.moveTo(54.5, 38); g.lineTo(57.5, 40.5); g.stroke();
+    g.beginPath(); g.moveTo(73.5, 38); g.lineTo(70.5, 40.5); g.stroke();
+    g.beginPath(); g.arc(64, 74, 12, 0.4, 2.7); g.stroke();
+    g.restore();
+  },
+  drawSide(g, f, ink, paper) {
+    const rnd = mulberry32(911 + f * 5), bob = [0, -4, -6, -3][f];
+    g.save(); g.translate(0, bob);
+    const gr = 124 - bob;
+    g.fillStyle = ink; g.strokeStyle = ink;
+    const FR = [
+      [[0.8, -0.1], [0.5, 0], [-0.6, 0.3], [-0.4, 0.2]],
+      [[0.1, 0], [0.4, -0.4], [0.4, -0.7], [0.2, -0.4]],
+      [[0.5, -1.7], [0.2, -1.2], [0.7, -0.3], [0.5, -0.1]],
+      [[0.3, -1.0], [0.6, -0.6], [-0.2, 0], [0.1, 0]]
+    ][f];
+    // дальние ноги
+    this.sleg(g, 80, 74, FR[1][0], FR[1][1], 22, 22, gr);
+    this.sleg(g, 44, 72, FR[3][0], FR[3][1], 22, 24, gr);
+    // тело
+    this.blob(g, 60, 66, 30, 14, rnd, 1); g.fill();
+    // шея
+    g.beginPath(); g.moveTo(74, 58); g.lineTo(88, 48); g.lineTo(99, 32); g.lineTo(108, 37); g.lineTo(98, 60); g.lineTo(84, 74); g.closePath(); g.fill();
+    // голова
+    g.beginPath(); g.moveTo(98, 31); g.lineTo(106, 26); g.lineTo(121, 42); g.lineTo(122, 48); g.lineTo(116, 51); g.lineTo(105, 46); g.lineTo(97, 40); g.closePath(); g.fill();
+    g.beginPath(); g.moveTo(100, 30); g.lineTo(101, 18); g.lineTo(106, 28); g.closePath(); g.fill();
+    // грива
+    g.lineWidth = 3;
+    const mw = [0, 2, 4, 2][f];
+    for (let i = 0; i < 5; i++) {
+      const sx = 100 - i * 4.5, sy = 32 + i * 5.5;
+      g.beginPath(); g.moveTo(sx, sy); g.quadraticCurveTo(sx - 6, sy - 3 - mw * 0.5, sx - 12 - mw, sy - 2 + mw * 0.4); g.stroke();
+    }
+    // хвост
+    const sw = [0, 4, 7, 3][f];
+    g.lineWidth = 6; g.beginPath(); g.moveTo(32, 60); g.quadraticCurveTo(16, 60 - sw, 6, 74 - sw); g.stroke();
+    g.lineWidth = 3; g.beginPath(); g.moveTo(26, 62); g.quadraticCurveTo(14, 68 - sw, 9, 82 - sw); g.stroke();
+    // ближние ноги
+    this.sleg(g, 84, 74, FR[0][0], FR[0][1], 22, 22, gr);
+    this.sleg(g, 40, 72, FR[2][0], FR[2][1], 22, 24, gr);
+    // вырезанные штрихи
+    g.strokeStyle = paper; g.lineWidth = 1.7;
+    g.beginPath(); g.arc(42, 64, 9, 3.6, 5.6); g.stroke();
+    g.beginPath(); g.moveTo(48, 74); g.quadraticCurveTo(62, 78, 76, 73); g.stroke();
+    g.beginPath(); g.moveTo(90, 52); g.lineTo(98, 41); g.stroke();
+    g.beginPath(); g.arc(109, 35, 1.6, 0, TAU); g.stroke();
+    g.restore();
+  }
+};
+
+/* ============================ Level generator ============================ */
+/*  Правила (кратко):
+    - seed = номер уровня; длительность 40..70 с растёт с уровнем; скорость 11..14.5.
+    - По дороге идут «ряды» через 23..40 ед.: ворота, овраг, перекати-поле, жердь, чужой табун.
+    - Генератор ведёт ожидаемый размер табуна E (как будто игрок выбирает лучшее, с небольшим штрафом)
+      и держит его около целевой кривой 10 → (150 + 45·уровень). Отстаёт — больше хороших ворот,
+      перегнал — больше «меньшего из зол», чужих табунов и жердей.
+    - Типы ворот: хорошие/плохие; дилемма «×2 или +A», где A ≈ E (выбор зависит от реального размера);
+      «÷2 или −S», где S ≈ E/2 (÷ никогда не убивает, − может).
+    - Чужой табун ≈ 30..60% от E, с 1-го уровня; на расстоянии ~40 ед. подворачивает к игроку (быстрее с уровнем),
+      но обойти его можно. Засада: со 2-го уровня сразу за выгодными воротами может ждать чужой табун.
+      Если табун сильно отстал от кривой, чужих табунов не будет. Препятствия забирают ~22–40% видимых лошадей.
+    - Водопой: ступени ×1..×4 стоят c·k голов (c ≈ E/12), остаток уходит на ×5. Итог = Σ голов × множитель ступени. */
+const LevelGenerator = {
+  pick(w, rnd) {
+    let s = 0; for (const k in w) s += w[k];
+    let r = rnd() * s;
+    for (const k in w) { r -= w[k]; if (r <= 0) return k; }
+    return 'gate';
+  },
+  make(n) {
+    const rnd = mulberry32(n * 9973 + 12345);
+    const R = (a, b) => a + (b - a) * rnd();
+    const diff = clamp((n - 1) / 12, 0, 1);
+    const speed = 11 + 3.5 * diff;
+    const dur = clamp(40 + (n - 1) * 2.5 + R(-3, 3), 40, 70);
+    const L = Math.round(speed * dur);
+    const targetEnd = Math.min(1500, 150 + n * 45);
+    const lv = { n, speed, L, gates: [], ravines: [], tumbles: [], poles: [], enemies: [] };
+    let E = 10, z = 42, last = '', idx = 0;
+    while (z < L - 28) {
+      const tgt = 10 + (targetEnd - 10) * clamp(z / L, 0, 1);
+      let type = 'gate';
+      if (idx >= 2) {
+        const w = {
+          gate: 0.52 - 0.12 * diff,
+          ravine: 0.13,
+          tumble: n >= 2 ? 0.12 + 0.05 * diff : 0,
+          pole: n >= 3 ? 0.1 + 0.06 * diff : 0,
+          enemy: 0.13 + 0.1 * diff
+        };
+        if (E < tgt * 0.6) w.gate += 0.35;
+        if (E > tgt * 1.4) { w.enemy *= 2; w.pole *= 1.5; }
+        if (E < 20 || E < tgt * 0.5) w.enemy = 0;
+        if (E < 30) { w.ravine = 0; w.tumble = 0; w.pole = 0; }
+        if (last !== 'gate') w[last] = 0;
+        type = this.pick(w, rnd);
+      }
+      if (type === 'gate') {
+        const res = this.gatePair(E, tgt, diff, rnd);
+        lv.gates.push({ z, opt: res.opts, done: false, chosen: -1, j: jit(rnd, 24) });
+        E = res.E;
+      } else if (type === 'ravine') {
+        const kind = rnd(), depth = R(3, 4.5);
+        let x0, x1;
+        if (kind < 0.36) { const w = 2 * W * R(0.35, 0.58); x0 = -W - 0.5; x1 = -W + w; }
+        else if (kind < 0.72) { const w = 2 * W * R(0.35, 0.58); x0 = W - w; x1 = W + 0.5; }
+        else { const w = 2 * W * R(0.28, 0.42), c = R(-1.8, 1.8); x0 = c - w / 2; x1 = c + w / 2; }
+        lv.ravines.push({ z0: z, z1: z + depth, x0, x1, cr: [R(0.15, 0.3), R(0.42, 0.58), R(0.7, 0.85)], hit: false, j: jit(rnd, 16) });
+        E *= 0.94;
+      } else if (type === 'tumble') {
+        const cnt = diff > 0.4 && rnd() < 0.5 ? 2 : 1;
+        for (let i = 0; i < cnt; i++) {
+          const arcs = [];
+          for (let k = 0; k < 6; k++) arcs.push({ rx: R(0.45, 1), ry: R(0.25, 0.9), r: R(0, Math.PI) });
+          lv.tumbles.push({ z: z + i * 6, x: R(-W, W), r: 0.65, vx: (R(4, 6) + 5 * diff) * (rnd() < 0.5 ? -1 : 1), rot: 0, arcs, hits: 0, cap: 0, dead: false, fade: 1, hit: false });
+          E *= 0.92;
+        }
+      } else if (type === 'pole') {
+        lv.poles.push({ z, x: R(-2.5, 2.5), len: R(2.6, 3.6), w: (R(1.1, 1.6) + 1.2 * diff) * (rnd() < 0.5 ? -1 : 1), ang: R(0, TAU), hits: 0, cap: 0, hit: false });
+        E *= 0.9;
+      } else if (type === 'enemy') {
+        const m = Math.max(6, Math.round(E * R(0.3, 0.6) * (0.8 + 0.4 * diff)));
+        this.enemy(lv, z, R(-3.5, 3.5), m, rnd);
+        E = Math.max(10, E - m * 0.7);
+      }
+      // засада: сразу за воротами на стороне выгодных ворот ждёт чужой табун
+      if (type === 'gate' && n >= 2 && E >= 20 && E >= tgt * 0.5 && idx >= 2 && rnd() < 0.15 + 0.2 * diff) {
+        const gp = lv.gates[lv.gates.length - 1];
+        const va = applyOp(gp.opt[0], 100), vb = applyOp(gp.opt[1], 100);
+        const side = va >= vb ? -1 : 1;
+        const m = Math.max(6, Math.round(E * R(0.25, 0.45)));
+        this.enemy(lv, z + 13, side * R(2.6, 3.6), m, rnd);
+        E = Math.max(10, E - m * 0.45);
+      }
+      E = Math.max(10, E);
+      last = type; idx++;
+      z += R(30, 40) - 7 * diff;
+    }
+    lv.expect = Math.round(E);
+    const c = Math.max(5, Math.round(E / 12));
+    lv.costs = [c, c * 2, c * 3, c * 4];
+    lv.stepZ = k => L + 8 + (k - 1) * 7;
+    lv.riverZ = L + 8 + 35;
+    return lv;
+  },
+  enemy(lv, meetZ, x, m, rnd) {
+    const off = 90 * ES / (lv.speed + ES);
+    const sx = [], sz = [], ph = [];
+    for (let i = 0; i < 60; i++) {
+      const rr = 0.36 * Math.sqrt(i + 0.5), a = i * 2.39996;
+      sx.push(Math.cos(a) * rr); sz.push(Math.sin(a) * rr * 0.8); ph.push(rnd());
+    }
+    lv.enemies.push({ z: meetZ + off, x, m, state: 'idle', acc: 0, vis: Math.min(m, 60), sx, sz, ph });
+  },
+  gatePair(E, tgt, diff, rnd) {
+    const R = (a, b) => a + (b - a) * rnd();
+    const r5 = v => Math.max(5, Math.round(v / 5) * 5);
+    const add = () => ({ op: '+', val: clamp(r5(E * (E > tgt ? R(0.15, 0.4) : R(0.35, 0.9))), 5, 500) });
+    const mul = () => ({ op: '×', val: diff > 0.3 && rnd() < 0.15 ? 3 : 2 });
+    const sub = () => ({ op: '−', val: r5(E * R(0.2, 0.5)) });
+    const div = () => ({ op: '÷', val: diff > 0.5 && rnd() < 0.2 ? 3 : 2 });
+    const pGG = E < tgt * 0.7 ? 0.45 : (E > tgt * 1.1 ? 0.08 : 0.2);
+    const pBB = (E < 20 ? 0 : 0.06 + 0.22 * diff) + (E > tgt * 1.15 ? 0.3 : 0);
+    const r = rnd();
+    let a, b;
+    if (r < pBB) {
+      // меньшее из зол: ÷k или −S, где S около потерь от деления
+      a = div();
+      const pivot = E - Math.ceil(E / a.val);
+      b = { op: '−', val: r5(pivot * R(0.6, 1.4)) };
+    } else if (r < pBB + pGG) {
+      // что выгоднее: ×k или +A, где A около прироста от умножения
+      a = mul();
+      b = { op: '+', val: clamp(r5(E * (a.val - 1) * R(0.6, 1.4)), 5, 600) };
+    } else {
+      a = (E > tgt * 1.05 || rnd() < 0.55) ? add() : mul();
+      b = rnd() < 0.6 ? sub() : div();
+    }
+    if (rnd() < 0.5) { const t = a; a = b; b = t; }
+    const va = applyOp(a, E), vb = applyOp(b, E);
+    const hi = Math.max(va, vb), lo = Math.min(va, vb);
+    return { opts: [a, b], E: hi * 0.85 + lo * 0.15 };
+  }
+};
+
+/* ============================ Herd (boids) ============================ */
+const Herd = {
+  x: 0, tx: 0, z: 0, n: 10, loss: 0, wNow: 1, horses: [], removeKind: 'scatter',
+  ax: new Float32Array(MAXV + 16), az: new Float32Array(MAXV + 16),
+  reset(n) {
+    this.x = 0; this.tx = 0; this.z = 0; this.n = n; this.loss = 0;
+    this.horses.length = 0; this.removeKind = 'scatter';
+    const v = Math.min(n, MAXV);
+    for (let i = 0; i < v; i++) this.horses.push(this.make(false));
+  },
+  radius() { return 0.3 * Math.sqrt(Math.max(1, this.horses.length)) + 0.35; },
+  make(edge) {
+    const r = this.radius(), side = Math.random() < 0.5 ? -1 : 1;
+    const h = { x: 0, rz: 0, vx: 0, vz: 0, ph: Math.random(), sc: 0.9 + Math.random() * 0.2, sw: Math.random() * TAU, t: edge ? 0 : 1 };
+    if (edge) {
+      h.x = this.x + side * (r + 0.5 + Math.random() * 0.8);
+      h.rz = (Math.random() - 0.6) * r * 1.6;
+      h.vx = -side * 3;
+    } else {
+      const a = Math.random() * TAU, d = Math.sqrt(Math.random()) * r;
+      h.x = this.x + Math.cos(a) * d; h.rz = Math.sin(a) * d * 0.8;
+    }
+    h.x = clamp(h.x, -W + 0.35, W - 0.35);
+    return h;
+  },
+  kill(i, kind, dir) {
+    const hs = this.horses, h = hs[i];
+    FX.horse(h.x, this.z + h.rz, kind, dir, h, false);
+    hs[i] = hs[hs.length - 1]; hs.pop();
+    this.loss += this.wNow;
+  },
+  update(dt, speed, lv) {
+    const px = this.x;
+    this.x += (this.tx - this.x) * Math.min(1, dt * 9);
+    const dX = this.x - px;
+    this.z += speed * dt;
+    const hs = this.horses, n = hs.length, ax = this.ax, az = this.az;
+    this.wNow = n ? this.n / n : 1;
+    const S = 0.62, S2 = S * S, KS = 30, KC = 5;
+    for (let i = 0; i < n; i++) { const h = hs[i]; ax[i] = (this.x - h.x) * KC; az[i] = -h.rz * KC * 1.3; }
+    for (let i = 0; i < n; i++) {
+      const a = hs[i];
+      for (let j = i + 1; j < n; j++) {
+        const b = hs[j];
+        const dx = a.x - b.x, dz = a.rz - b.rz, d2 = dx * dx + dz * dz;
+        if (d2 < S2) {
+          const d = Math.sqrt(d2) + 1e-4, p = (S - d) / d * KS;
+          ax[i] += dx * p; az[i] += dz * p; ax[j] -= dx * p; az[j] -= dz * p;
+        }
+      }
+    }
+    // табун «сжимается», обтекая края оврагов
+    for (const r of lv.ravines) {
+      const ahead = r.z0 - this.z;
+      if (ahead < -6 || ahead > 9) continue;
+      for (let i = 0; i < n; i++) {
+        const h = hs[i], d = r.z0 - (this.z + h.rz);
+        if (d < -0.5 || d > 4.5) continue;
+        if (r.x0 > -W + 0.6 && h.x < r.x0 + 0.7 && h.x > r.x0 - 0.8) ax[i] -= 26;
+        if (r.x1 < W - 0.6 && h.x > r.x1 - 0.7 && h.x < r.x1 + 0.8) ax[i] += 26;
+      }
+    }
+    const rmax = this.radius() * 1.6 + 1;
+    for (let i = 0; i < n; i++) {
+      const h = hs[i];
+      h.vx = (h.vx + ax[i] * dt) * 0.88; h.vz = (h.vz + az[i] * dt) * 0.88;
+      h.x += dX * 0.82 + h.vx * dt; h.rz += h.vz * dt;
+      if (h.x < -W + 0.35) { h.x = -W + 0.35; h.vx = Math.abs(h.vx) * 0.3; }
+      else if (h.x > W - 0.35) { h.x = W - 0.35; h.vx = -Math.abs(h.vx) * 0.3; }
+      h.rz = clamp(h.rz, -rmax, rmax);
+      if (h.t < 1) h.t = Math.min(1, h.t + dt * 3);
+    }
+  },
+  sync() {
+    const d = Math.floor(this.loss + 1e-6);
+    if (d > 0) { this.n = Math.max(0, this.n - d); this.loss -= d; }
+    const hs = this.horses, target = Math.min(this.n, MAXV);
+    while (hs.length > target) {
+      const i = Math.floor(Math.random() * hs.length), h = hs[i];
+      FX.horse(h.x, this.z + h.rz, this.removeKind, 0, h, false);
+      hs[i] = hs[hs.length - 1]; hs.pop();
+    }
+    let add = Math.min(target - hs.length, 4);
+    while (add-- > 0) hs.push(this.make(hs.length > 0));
+  }
+};
+
+/* ============================ FX ============================ */
+const FX = {
+  list: [], pops: [],
+  clear() { this.list.length = 0; this.pops.length = 0; },
+  horse(x, z, kind, dir, h, enemy) {
+    if (kind === 'stay') { if (this.list.length > 320) return; }
+    else if (this.list.length > 150) return;
+    const p = { kind, x, z, y: 0, vx: 0, vy: 0, vz: 0, rot: 0, vr: 0, t: 0, life: 0.9, sc: h ? h.sc : 1, ph: h ? h.ph : Math.random(), enemy };
+    const s = dir || (Math.random() < 0.5 ? -1 : 1);
+    switch (kind) {
+      case 'fly': p.vx = s * (4 + Math.random() * 4); p.vy = 4.5 + Math.random() * 3; p.vz = (Math.random() - 0.3) * 4; p.vr = s * (6 + Math.random() * 8); p.life = 1.0; break;
+      case 'clash': p.vx = (Math.random() - 0.5) * 6; p.vy = 3 + Math.random() * 2.5; p.vr = (Math.random() - 0.5) * 12; p.life = 0.65; break;
+      case 'fall': p.life = 0.6; break;
+      case 'scatter': p.vx = (Math.random() - 0.5) * 7; p.vz = -3 - Math.random() * 4; p.life = 0.55; break;
+      case 'stay': p.life = 1e9; break;
+    }
+    this.list.push(p);
+  },
+  drop(x, z) {
+    if (this.list.length > 200) return;
+    this.list.push({ kind: 'drop', x, z, y: 0.2, vx: (Math.random() - 0.5) * 5, vy: 4 + Math.random() * 5, vz: (Math.random() - 0.2) * 3, rot: 0, vr: 0, t: 0, life: 1.1, sc: 0.6 + Math.random() * 0.8 });
+  },
+  pop(text, danger) { this.pops.push({ text, danger, t: 0 }); if (this.pops.length > 4) this.pops.shift(); },
+  update(dt) {
+    const l = this.list;
+    for (let i = l.length - 1; i >= 0; i--) {
+      const p = l[i];
+      p.t += dt;
+      if (p.kind === 'fly' || p.kind === 'clash' || p.kind === 'drop') {
+        p.vy -= 18 * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.z += p.vz * dt; p.rot += p.vr * dt;
+        if (p.y < 0) { p.y = 0; p.vy = 0; p.vx *= 0.8; }
+      } else if (p.kind === 'scatter') {
+        p.x += p.vx * dt; p.z += p.vz * dt;
+      }
+      if (p.t >= p.life) { l[i] = l[l.length - 1]; l.pop(); }
+    }
+    for (let i = this.pops.length - 1; i >= 0; i--) {
+      this.pops[i].t += dt;
+      if (this.pops[i].t > 1.1) this.pops.splice(i, 1);
+    }
+  }
+};
+
+/* ============================ Renderer ============================ */
+const Renderer = {
+  cv: null, g: null, dpr: 1, Ws: 0, Hs: 0, PW: 0, cx: 0, hy: 0, F: 1, camH: 10, topSafe: 0,
+  cam: { x: 0, z: 0 }, X: 0, Y: 0, S: 0,
+  hillFar: null, hillNear: null, hillW: 0, HX: 60, farH: 0, nearH: 0,
+  items: [], pool: [], nI: 0,
+  init(cv) { this.cv = cv; this.g = cv.getContext('2d', { alpha: false }) || cv.getContext('2d'); this.resize(); },
+  resize() {
+    if (!this.cv) return;
+    const w = Math.max(1, window.innerWidth), h = Math.max(1, window.innerHeight);
+    this.dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    this.Ws = w; this.Hs = h;
+    this.cv.width = Math.round(w * this.dpr); this.cv.height = Math.round(h * this.dpr);
+    this.g.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+    this.PW = Math.min(w, h * 0.68);
+    this.cx = w / 2;
+    this.hy = h * 0.34;
+    this.F = this.PW * 0.44 * CAMD / W;
+    this.camH = (h * 0.8 - this.hy) * CAMD / this.F;
+    const pr = document.getElementById('probe');
+    this.topSafe = pr ? pr.getBoundingClientRect().height : 0;
+    if (Theme.ready) this.buildStatic();
+  },
+  P(x, y, z) {
+    const dz = z - this.cam.z;
+    if (dz < 0.25) return false;
+    const s = this.F / dz;
+    this.X = this.cx + (x - this.cam.x) * s;
+    this.Y = this.hy + (this.camH - y) * s;
+    this.S = s;
+    return true;
+  },
+  /* --- статичные холмы (пререндер) --- */
+  buildStatic() {
+    this.HX = 70;
+    this.hillW = this.Ws + this.HX * 2;
+    this.farH = Math.round(this.PW * 0.15);
+    this.nearH = Math.round(this.PW * 0.085);
+    this.hillFar = this.makeHills(this.hillW, this.farH, 4242, 'far');
+    this.hillNear = this.makeHills(this.hillW, this.nearH, 777, 'near');
+  },
+  makeHills(wc, hc, seed, kind) {
+    const c = Theme.c, dpr = this.dpr;
+    const cv = document.createElement('canvas');
+    cv.width = Math.max(1, Math.ceil(wc * dpr)); cv.height = Math.max(1, Math.ceil(hc * dpr));
+    const g = cv.getContext('2d');
+    g.scale(dpr, dpr); g.lineCap = 'round'; g.lineJoin = 'round';
+    const rnd = mulberry32(seed);
+    const n = Math.max(8, Math.ceil(wc / 12)), pts = [];
+    const p1 = rnd() * TAU, p2 = rnd() * TAU, far = kind === 'far';
+    const waves = wc / Math.max(240, this.PW);
+    for (let i = 0; i <= n; i++) {
+      const x = i / n * wc, u = x / wc;
+      let h = far
+        ? 0.55 + 0.25 * Math.sin(u * TAU * 1.6 * waves + p1) + 0.14 * Math.sin(u * TAU * 4.1 * waves + p2)
+        : 0.45 + 0.32 * Math.sin(u * TAU * 1.1 * waves + p1) + 0.12 * Math.sin(u * TAU * 3.3 * waves + p2);
+      h = clamp(h, 0.08, 1);
+      pts.push([x, hc - h * hc * (far ? 0.92 : 0.8) + (rnd() - 0.5) * 1.4]);
+    }
+    const path = () => {
+      g.beginPath(); g.moveTo(0, hc + 1);
+      for (const p of pts) g.lineTo(p[0], p[1]);
+      g.lineTo(wc, hc + 1); g.closePath();
+    };
+    if (far) {
+      path(); g.fillStyle = c.paper; g.fill();
+      g.save(); path(); g.clip();
+      g.strokeStyle = c.ink; g.lineWidth = 1;
+      for (let x = -hc; x < wc + hc; x += 5) {
+        g.beginPath(); g.moveTo(x + (rnd() - 0.5) * 0.8, hc); g.lineTo(x + hc * 0.9, 0); g.stroke();
+      }
+      g.restore();
+      path(); g.strokeStyle = c.ink; g.lineWidth = 1.6; g.stroke();
+    } else {
+      path(); g.fillStyle = c.ink; g.fill();
+      g.strokeStyle = c.paper; g.lineWidth = 1.2;
+      const cnt = Math.round(n * 1.4);
+      for (let k = 0; k < cnt; k++) {
+        const i = 1 + Math.floor(rnd() * (n - 2));
+        const top = pts[i][1];
+        const y = top + 3 + rnd() * (hc - top - 5);
+        if (y > hc - 2 || y < top + 2) continue;
+        const slope = (pts[i + 1][1] - pts[i - 1][1]) / (pts[i + 1][0] - pts[i - 1][0]);
+        const len = 4 + rnd() * 9, x = pts[i][0];
+        g.beginPath(); g.moveTo(x - len / 2, y - slope * len / 2); g.lineTo(x + len / 2, y + slope * len / 2); g.stroke();
+      }
+    }
+    return cv;
+  },
+  drawSky(hy, par, scale) {
+    const g = this.g, c = Theme.c, PW = this.PW;
+    const r = PW * 0.2 * scale, sx = this.cx + PW * 0.27 * scale - par * 0.15, sy = hy - r * 0.55;
+    g.globalAlpha = 0.85;
+    g.fillStyle = c.red; g.beginPath(); g.arc(sx, sy, r, 0, TAU); g.fill();
+    g.strokeStyle = c.paper; g.lineWidth = Math.max(1.5, r * 0.035);
+    for (let i = 1; i <= 3; i++) {
+      const yy = sy + r * (0.12 + i * 0.13);
+      const half = Math.sqrt(Math.max(0, r * r - (yy - sy) * (yy - sy))) * 0.86;
+      g.beginPath(); g.moveTo(sx - half, yy); g.lineTo(sx + half, yy); g.stroke();
+    }
+    g.globalAlpha = 1;
+    if (this.hillFar) g.drawImage(this.hillFar, -this.HX - par * 0.4, hy - this.farH, this.hillW, this.farH);
+    if (this.hillNear) g.drawImage(this.hillNear, -this.HX - par, hy - this.nearH, this.hillW, this.nearH);
+    g.fillStyle = c.paper; g.fillRect(0, hy, this.Ws, this.Hs - hy);
+    g.strokeStyle = c.ink; g.lineWidth = 2;
+    g.beginPath(); g.moveTo(0, hy); g.lineTo(this.Ws, hy); g.stroke();
+  },
+  /* --- мир --- */
+  drawWorld(gt) {
+    const L = Game.lvl;
+    if (!L) return;
+    this.cam.z = Herd.z - CAMD;
+    this.cam.x = Herd.x * 0.25;
+    const g = this.g, c = Theme.c;
+    g.fillStyle = c.paper; g.fillRect(0, 0, this.Ws, this.Hs);
+    this.drawSky(this.hy, Herd.x * 7, 1);
+    this.drawGround(L);
+    this.drawDecals(L, gt);
+    this.drawUprights(L, gt);
+    this.drawPlates(L);
+  },
+  drawGround(L) {
+    const g = this.g, c = Theme.c, cz = this.cam.z;
+    const zEnd = Math.min(L.riverZ, cz + 600);
+    // штриховка земли
+    g.strokeStyle = c.ink;
+    let lastY = 1e9;
+    for (let z = Math.ceil((cz + 1) / 5) * 5; z < cz + 300; z += 5) {
+      if (!this.P(-W, 0, z)) continue;
+      const y = this.Y, lx = this.X;
+      if (lastY - y < 3.5) break;
+      lastY = y;
+      this.P(W, 0, z);
+      const rx = this.X;
+      g.lineWidth = Math.max(0.6, this.S * 0.025);
+      g.beginPath();
+      if (z < zEnd) { g.moveTo(0, y); g.lineTo(lx - 3, y); g.moveTo(rx + 3, y); g.lineTo(this.Ws, y); }
+      else { g.moveTo(0, y); g.lineTo(this.Ws, y); }
+      g.stroke();
+    }
+    // дорога
+    const zn = cz + 0.3;
+    if (zEnd > zn) {
+      this.P(-W, 0, zn); const ax = this.X, ay = this.Y;
+      this.P(W, 0, zn); const bx = this.X;
+      this.P(W, 0, zEnd); const cx2 = this.X, cy = this.Y;
+      this.P(-W, 0, zEnd); const dx = this.X;
+      g.fillStyle = c.paper2;
+      g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, ay); g.lineTo(cx2, cy); g.lineTo(dx, cy); g.closePath(); g.fill();
+      // борозды
+      g.strokeStyle = c.ink;
+      lastY = 1e9;
+      const segs = [0.03, 0.22, 0.28, 0.47, 0.53, 0.72, 0.78, 0.97];
+      for (let k = Math.ceil((cz + 1) / 3); k * 3 < zEnd; k++) {
+        const z = k * 3;
+        if (!this.P(-W, 0, z)) continue;
+        const y = this.Y;
+        if (lastY - y < 4) break;
+        lastY = y;
+        const lx = this.X, s = this.S, wpx = 2 * W * s;
+        const sh = (h1(k) - 0.5) * 0.06;
+        g.lineWidth = Math.max(0.6, s * 0.05);
+        g.beginPath();
+        for (let q = 0; q < 8; q += 2) {
+          if (h1(k * 4 + q) < 0.18) continue;
+          g.moveTo(lx + wpx * clamp(segs[q] + sh, 0, 1), y);
+          g.lineTo(lx + wpx * clamp(segs[q + 1] + sh, 0, 1), y);
+        }
+        g.stroke();
+      }
+      // края дороги
+      g.lineWidth = 2.5;
+      g.beginPath(); g.moveTo(ax, ay); g.lineTo(dx, cy); g.moveTo(bx, ay); g.lineTo(cx2, cy); g.stroke();
+    }
+    // редкие стебли травы (только вне дороги)
+    g.strokeStyle = c.ink; g.lineCap = 'round';
+    for (let k = Math.ceil((cz + 2) / 2.5); k * 2.5 < cz + 110; k++) {
+      const z = k * 2.5;
+      for (let side = -1; side <= 1; side += 2) {
+        const hv = h1(k * 2 + (side > 0 ? 1 : 0));
+        if (hv < 0.5) continue;
+        const x = side * (W + 0.8 + h1(k * 7 + side * 3) * 9);
+        if (!this.P(x, 0, z)) continue;
+        const bx = this.X, by = this.Y, s = this.S;
+        if (s < 3) continue;
+        g.lineWidth = Math.max(0.7, s * 0.05);
+        g.beginPath();
+        for (let q = -1; q <= 1; q++) {
+          g.moveTo(bx + q * s * 0.08, by);
+          g.lineTo(bx + q * s * 0.3 + side * s * 0.05, by - s * (0.75 + 0.25 * (1 - Math.abs(q))));
+        }
+        g.stroke();
+      }
+    }
+  },
+  quad(x0, x1, z0, z1) {
+    if (!this.P(x0, 0, z0)) return false;
+    const ax = this.X, ay = this.Y; this.P(x1, 0, z0); const bx = this.X;
+    this.P(x1, 0, z1); const cx = this.X, cy = this.Y; this.P(x0, 0, z1); const dx = this.X;
+    const g = this.g;
+    g.beginPath(); g.moveTo(ax, ay); g.lineTo(bx, ay); g.lineTo(cx, cy); g.lineTo(dx, cy); g.closePath();
+    return true;
+  },
+  drawDecals(L, gt) {
+    const g = this.g, c = Theme.c, cz = this.cam.z;
+    // овраги
+    for (const r of L.ravines) {
+      if (r.z1 < cz + 0.4 || r.z0 > cz + 170) continue;
+      const z0 = Math.max(r.z0, cz + 0.4);
+      const x0 = Math.max(r.x0, -W - 0.3), x1 = Math.min(r.x1, W + 0.3);
+      if (!this.quad(x0, x1, z0, r.z1)) continue;
+      g.fillStyle = c.ink; g.fill();
+      this.P(0, 0, (z0 + r.z1) / 2);
+      const s = this.S;
+      g.strokeStyle = c.paper; g.lineWidth = Math.max(0.8, s * 0.045);
+      g.beginPath();
+      for (let i = 0; i < 3; i++) {
+        const xa = x0 + (x1 - x0) * r.cr[i];
+        const za = Math.max(z0, r.z0 + 0.5), zb = r.z1 - 0.5;
+        if (zb <= za || !this.P(xa, 0, za)) continue;
+        g.moveTo(this.X, this.Y);
+        this.P(xa + r.j[i] * 0.3, 0, (za + zb) / 2); g.lineTo(this.X, this.Y);
+        this.P(xa + r.j[i + 3] * 0.2, 0, zb); g.lineTo(this.X, this.Y);
+      }
+      g.stroke();
+      this.quad(x0, x1, z0, r.z1);
+      g.strokeStyle = c.red; g.lineWidth = Math.max(2.5, s * 0.09); g.lineJoin = 'round'; g.stroke();
+    }
+    // ступени водопоя
+    const f = Game.finale;
+    for (let k = 1; k <= 5; k++) {
+      const za = L.stepZ(k), zb = za + 6.3;
+      if (zb < cz + 0.4 || za > cz + 170) continue;
+      if (!this.quad(-W, W, Math.max(za, cz + 0.4), zb)) continue;
+      // светлая ступень с чернильной кромкой: чёрные лошади на ней хорошо читаются
+      g.fillStyle = c.paper; g.fill();
+      g.strokeStyle = c.ink; g.lineJoin = 'miter';
+      g.lineWidth = Math.max(2, (this.P(0, 0, Math.max(za, cz + 0.4)) ? this.S : 4) * 0.12);
+      g.stroke();
+      // штриховка дальней кромки ступени
+      if (this.P(-W, 0, zb - 0.6)) {
+        const yA = this.Y, lA = this.X; this.P(W, 0, zb - 0.6); const rA = this.X;
+        g.lineWidth = Math.max(1, this.S * 0.05);
+        g.beginPath(); g.moveTo(lA, yA); g.lineTo(rA, yA); g.stroke();
+      }
+      if (this.P(0, 0, za + 4.4)) {
+        const fs = Math.max(this.PW * 0.06, this.S * 2.2);
+        g.font = `900 ${fs}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+        if (f.k >= k) {
+          const tw = g.measureText('×' + k).width;
+          g.fillStyle = c.ink;
+          g.fillRect(this.X - tw / 2 - fs * 0.25, this.Y - fs * 0.6, tw + fs * 0.5, fs * 1.2);
+          g.fillStyle = c.paper;
+        } else g.fillStyle = c.ink;
+        g.fillText('×' + k, this.X, this.Y);
+      }
+    }
+    // река
+    if (L.riverZ < cz + 220) {
+      const z0 = Math.max(L.riverZ, cz + 0.4), z1 = L.riverZ + 16;
+      if (this.quad(-90, 90, z0, z1)) {
+        g.fillStyle = c.ink; g.fill();
+        g.strokeStyle = c.paper;
+        for (let j = 0; j < 6; j++) {
+          const zz = L.riverZ + 1.2 + j * 2.4;
+          if (zz < cz + 0.5 || !this.P(0, 0, zz)) continue;
+          g.lineWidth = Math.max(0.8, this.S * 0.05);
+          g.beginPath();
+          for (let q = 0; q <= 24; q++) {
+            const xx = -16 + q * (32 / 24);
+            const wz = zz + Math.sin(xx * 0.9 + gt * 1.6 + j) * 0.25;
+            if (!this.P(xx, 0, wz)) continue;
+            if (q) g.lineTo(this.X, this.Y); else g.moveTo(this.X, this.Y);
+          }
+          g.stroke();
+        }
+      }
+    }
+  },
+  add(z, t, o, i) {
+    let it = this.pool[this.nI];
+    if (!it) { it = { z: 0, t: 0, o: null, i: 0 }; this.pool[this.nI] = it; }
+    it.z = z; it.t = t; it.o = o; it.i = i; this.nI++;
+    this.items.push(it);
+  },
+  drawUprights(L, gt) {
+    const cz = this.cam.z, near = cz + 0.5, far = cz + 170;
+    this.items.length = 0; this.nI = 0;
+    for (const h of Herd.horses) this.add(Herd.z + h.rz, 0, h, 0);
+    for (const e of L.enemies) {
+      if (e.state === 'gone' || e.z < near - 3 || e.z > far) continue;
+      const cnt = Math.min(e.m, 60);
+      for (let i = 0; i < cnt; i++) this.add(e.z + e.sz[i], 1, e, i);
+    }
+    for (const gp of L.gates) if (gp.z > cz + 2 && gp.z < far) this.add(gp.z, 2, gp, 0);
+    for (const t of L.tumbles) if (t.fade > 0 && t.z > near && t.z < far) this.add(t.z, 3, t, 0);
+    for (const p of L.poles) if (p.z > near && p.z < far) this.add(p.z, 4, p, 0);
+    for (const p of FX.list) if (p.z > near && p.z < far) this.add(p.z, 5, p, 0);
+    this.items.sort((a, b) => b.z - a.z);
+    const spr = HorseSprites;
+    for (const it of this.items) {
+      const o = it.o;
+      switch (it.t) {
+        case 0: {
+          const fr = ((gt * 2.3 + o.ph) % 1 * 4) | 0;
+          this.sprite(spr.rear[fr], o.x + Math.sin(gt * 2.1 + o.sw) * 0.04, 0, it.z, o.sc, o.t, 0);
+          break;
+        }
+        case 1: {
+          const fr = ((gt * 2.3 + o.ph[it.i]) % 1 * 4) | 0;
+          this.sprite(spr.front[fr], o.x + o.sx[it.i], 0, it.z, 1, 1, 0);
+          break;
+        }
+        case 2: this.drawGate(o); break;
+        case 3: this.drawTumble(o); break;
+        case 4: this.drawPole(o); break;
+        case 5: this.drawFx(o, gt); break;
+      }
+    }
+  },
+  sprite(img, x, y, z, sc, alpha, rot) {
+    if (!img || !this.P(x, y, z)) return;
+    const hp = 1.35 * sc * this.S;
+    if (hp < 2 || alpha <= 0) return;
+    const g = this.g;
+    if (alpha < 1) g.globalAlpha = alpha;
+    if (rot) {
+      g.save(); g.translate(this.X, this.Y - hp / 2); g.rotate(rot);
+      g.drawImage(img, -hp / 2, -hp / 2, hp, hp); g.restore();
+    } else g.drawImage(img, this.X - hp / 2, this.Y - hp, hp, hp);
+    if (alpha < 1) g.globalAlpha = 1;
+  },
+  drawFx(p, gt) {
+    const spr = p.enemy ? HorseSprites.front : HorseSprites.rear;
+    const a = 1 - p.t / p.life;
+    switch (p.kind) {
+      case 'fly': case 'clash': this.sprite(spr[((p.ph * 4) | 0) % 4], p.x, p.y, p.z, p.sc, clamp(a * 1.5, 0, 1), p.rot); break;
+      case 'fall': this.sprite(spr[0], p.x, -p.t * 2.5, p.z, p.sc * (1 - p.t / p.life * 0.8), clamp(a * 1.4, 0, 1), 0); break;
+      case 'scatter': this.sprite(spr[((gt * 2.3 + p.ph) % 1 * 4) | 0], p.x, 0, p.z, p.sc, a, 0); break;
+      case 'stay': this.sprite(spr[0], p.x, 0, p.z, p.sc, 1, 0); break;
+      case 'drop': {
+        if (!this.P(p.x, p.y, p.z)) return;
+        const g = this.g, c = Theme.c, r = Math.max(1.5, this.S * 0.09 * p.sc);
+        g.globalAlpha = clamp(a * 1.5, 0, 1);
+        g.fillStyle = c.paper; g.strokeStyle = c.ink; g.lineWidth = Math.max(1, r * 0.35);
+        g.beginPath(); g.arc(this.X, this.Y, r, 0, TAU); g.fill(); g.stroke();
+        g.globalAlpha = 1;
+        break;
+      }
+    }
+  },
+  roughArch(x0, y0, x1, y1, j) {
+    // арка: прямоугольник со скруглённым верхом и лёгким неровным контуром
+    const g = this.g, w = x1 - x0, hgt = y1 - y0, k = 0.9;
+    g.beginPath();
+    g.moveTo(x0 + j[0] * k, y1 + j[1] * k);
+    g.lineTo(x0 + j[2] * k, y0 + hgt * 0.5 + j[3] * k);
+    g.lineTo(x0 + j[4] * k, y0 + hgt * 0.12 + j[5] * k);
+    g.quadraticCurveTo(x0 + w * 0.5 + j[6] * k, y0 - hgt * 0.32 + j[7] * k, x1 + j[8] * k, y0 + hgt * 0.12 + j[9] * k);
+    g.lineTo(x1 + j[10] * k, y0 + hgt * 0.5 + j[11] * k);
+    g.lineTo(x1 + j[12] * k, y1 + j[13] * k);
+    g.lineTo(x0 + w * 0.5 + j[14] * k, y1 + j[15] * k);
+    g.closePath();
+  },
+  drawGate(gp) {
+    const g = this.g, c = Theme.c;
+    const dz = gp.z - this.cam.z;
+    let a = clamp((170 - dz) / 35, 0, 1);
+    if (gp.done) a *= clamp((dz - 7) / 7, 0, 1);
+    if (a <= 0 || !this.P(0, 0, gp.z)) return;
+    const s = this.S;
+    g.globalAlpha = a;
+    // жерди-столбы
+    g.strokeStyle = c.ink; g.lineCap = 'butt';
+    g.lineWidth = Math.max(2, s * 0.22);
+    g.beginPath();
+    for (const x of [-W, 0, W]) {
+      this.P(x, 0, gp.z); g.moveTo(this.X, this.Y);
+      this.P(x, 3.6, gp.z); g.lineTo(this.X, this.Y);
+    }
+    g.stroke();
+    g.lineCap = 'round';
+    for (let side = 0; side < 2; side++) {
+      const o = gp.opt[side], good = o.op === '+' || o.op === '×';
+      const xc = side ? W / 2 : -W / 2;
+      this.P(xc, 2.75, gp.z);
+      const px = this.X, py = this.Y;
+      let fs = s * 1.05;
+      if (dz < 45) fs = Math.max(fs, this.PW * 0.07);
+      const txt = o.op + o.val;
+      g.font = `900 ${fs}px ${FONT}`;
+      const tw = g.measureText(txt).width;
+      const pw = Math.max(s * (W - 0.6), tw + fs * 0.7), ph = Math.max(s * 1.5, fs * 1.35);
+      const x0 = px - pw / 2, y0 = py - ph / 2;
+      const j = side ? gp.j.subarray(8, 24) : gp.j.subarray(0, 16);
+      this.roughArch(x0, y0, x0 + pw, y0 + ph, j);
+      if (good) { g.fillStyle = c.ink; g.fill(); }
+      else {
+        g.fillStyle = c.paper; g.fill();
+        g.strokeStyle = c.red; g.lineWidth = 5.5; g.lineJoin = 'round'; g.stroke();
+      }
+      g.fillStyle = good ? c.paper : c.red;
+      g.textAlign = 'center'; g.textBaseline = 'middle';
+      g.fillText(txt, px, py + ph * 0.06);
+    }
+    g.globalAlpha = 1;
+  },
+  drawTumble(t) {
+    if (!this.P(t.x, t.r, t.z)) return;
+    const g = this.g, c = Theme.c, R = t.r * this.S, cx = this.X, cy = this.Y;
+    if (R < 1) return;
+    g.globalAlpha = t.fade;
+    g.strokeStyle = c.ink; g.lineWidth = Math.max(1.1, this.S * 0.07);
+    g.beginPath(); g.arc(cx, cy, R, 0, TAU); g.stroke();
+    for (const a of t.arcs) {
+      g.beginPath(); g.ellipse(cx, cy, R * a.rx, R * a.ry, a.r + t.rot, 0, TAU); g.stroke();
+    }
+    g.lineWidth = Math.max(0.8, this.S * 0.04);
+    g.beginPath();
+    for (let i = 0; i < 8; i++) {
+      const an = i / 8 * TAU + t.rot;
+      g.moveTo(cx + Math.cos(an) * R * 0.9, cy + Math.sin(an) * R * 0.9);
+      g.lineTo(cx + Math.cos(an + 0.2) * R * 1.18, cy + Math.sin(an + 0.2) * R * 1.18);
+    }
+    g.stroke();
+    g.globalAlpha = 1;
+  },
+  drawPole(p) {
+    const g = this.g, c = Theme.c;
+    if (!this.P(p.x, 0, p.z)) return;
+    const bx = this.X, by = this.Y, s = this.S;
+    this.P(p.x, 1.7, p.z); const tx = this.X, ty = this.Y;
+    g.strokeStyle = c.ink; g.lineCap = 'butt';
+    g.lineWidth = Math.max(2.5, s * 0.3);
+    g.beginPath(); g.moveTo(bx, by); g.lineTo(tx, ty); g.stroke();
+    const cs = Math.cos(p.ang) * p.len, sn = Math.sin(p.ang) * p.len;
+    const ok1 = this.P(p.x - cs, 1.25, p.z - sn), x1 = this.X, y1 = this.Y, s1 = this.S;
+    const ok2 = this.P(p.x + cs, 1.25, p.z + sn), x2 = this.X, y2 = this.Y, s2 = this.S;
+    g.lineCap = 'round';
+    if (ok1 && ok2) {
+      g.lineWidth = Math.max(2.5, (s1 + s2) * 0.11);
+      g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.stroke();
+      g.strokeStyle = c.paper; g.lineWidth = Math.max(0.8, (s1 + s2) * 0.02);
+      g.beginPath(); g.moveTo(x1 + (x2 - x1) * 0.1, y1 + (y2 - y1) * 0.1); g.lineTo(x1 + (x2 - x1) * 0.42, y1 + (y2 - y1) * 0.42);
+      g.moveTo(x1 + (x2 - x1) * 0.58, y1 + (y2 - y1) * 0.58); g.lineTo(x1 + (x2 - x1) * 0.9, y1 + (y2 - y1) * 0.9); g.stroke();
+    }
+    this.P(p.x, 1.25, p.z);
+    g.fillStyle = c.ink; g.beginPath(); g.arc(this.X, this.Y, Math.max(2.5, s * 0.22), 0, TAU); g.fill();
+  },
+  plate(x, y, txt, danger) {
+    const g = this.g, c = Theme.c;
+    const fs = Math.max(18, Math.round(this.PW * 0.058));
+    g.font = `900 ${fs}px ${FONT}`;
+    const tw = g.measureText(txt).width, w = tw + fs * 0.9, h = fs * 1.42;
+    x = clamp(x, w / 2 + 8, this.Ws - w / 2 - 8);
+    y = clamp(y, this.topSafe + 74 + h / 2, this.Hs - h / 2 - 12);
+    const l = x - w / 2, t = y - h / 2, tri = fs * 0.28;
+    g.beginPath();
+    g.moveTo(l, t); g.lineTo(l + w, t); g.lineTo(l + w, t + h);
+    g.lineTo(x + tri, t + h); g.lineTo(x, t + h + tri); g.lineTo(x - tri, t + h);
+    g.lineTo(l, t + h); g.closePath();
+    g.fillStyle = c.paper; g.fill();
+    g.strokeStyle = danger ? c.red : c.ink; g.lineWidth = 3; g.lineJoin = 'miter'; g.stroke();
+    g.fillStyle = danger ? c.red : c.ink;
+    g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.fillText(txt, x, y + fs * 0.04);
+    return { x, y: t };
+  },
+  drawPlates(L) {
+    const g = this.g, c = Theme.c;
+    for (const e of L.enemies) {
+      if (e.state === 'gone' || e.m <= 0) continue;
+      const dz = e.z - this.cam.z;
+      if (dz < 4 || dz > 120) continue;
+      const er = 0.3 * Math.sqrt(Math.min(e.m, 60)) + 0.4;
+      if (!this.P(e.x, 0, e.z + er)) continue;
+      this.plate(this.X, this.Y - 1.35 * this.S * 1.25, fmt(e.m), true);
+    }
+    let px = this.cx, py = this.Hs * 0.6;
+    if (Herd.n > 0 && Herd.horses.length && this.P(Herd.x, 0, Herd.z + Herd.radius() * 0.7)) {
+      const r = this.plate(this.X, this.Y - 1.35 * this.S * 1.3, fmt(Herd.n), false);
+      px = r.x; py = r.y;
+    }
+    const fs = Math.max(18, Math.round(this.PW * 0.06));
+    g.font = `900 ${fs}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+    for (const p of FX.pops) {
+      const a = clamp(1.4 - p.t * 1.4, 0, 1);
+      g.globalAlpha = a;
+      const y = py - fs * 0.9 - p.t * 46;
+      g.lineWidth = 4; g.strokeStyle = c.paper; g.strokeText(p.text, px, y);
+      g.fillStyle = p.danger ? c.red : c.ink; g.fillText(p.text, px, y);
+    }
+    g.globalAlpha = 1;
+  },
+  /* --- заставка --- */
+  drawMenu(t) {
+    const g = this.g, c = Theme.c, Ws = this.Ws, Hs = this.Hs, PW = this.PW;
+    const hy = Hs * 0.58;
+    g.fillStyle = c.paper; g.fillRect(0, 0, Ws, Hs);
+    this.drawSky(hy, Math.sin(t * 0.15) * 14, 1.35);
+    g.strokeStyle = c.ink;
+    for (let i = 1; i < 16; i++) {
+      const y = hy + (Hs - hy) * Math.pow(i / 16, 1.7);
+      g.lineWidth = 0.6 + i * 0.06;
+      g.beginPath(); g.moveTo(0, y); g.lineTo(Ws, y); g.stroke();
+    }
+    const rows = [
+      { y: hy + PW * 0.06, s: PW * 0.12, sp: PW * 0.32, n: 9, seed: 3 },
+      { y: hy + PW * 0.19, s: PW * 0.17, sp: PW * 0.42, n: 7, seed: 17 }
+    ];
+    for (const r of rows) {
+      const span = Ws + r.s * 2;
+      for (let i = 0; i < r.n; i++) {
+        const off = h1(i + r.seed) * span * 0.08;
+        const x = ((i * span / r.n + off + t * r.sp) % span) - r.s;
+        const fr = ((t * 2.6 + h1(i * 3 + r.seed)) % 1 * 4) | 0;
+        const yy = r.y + (h1(i + r.seed * 2) - 0.5) * r.s * 0.18;
+        g.drawImage(HorseSprites.side[fr], x - r.s / 2, yy - r.s, r.s, r.s);
+      }
+    }
+  }
+};
+
+/* ============================ Input ============================ */
+const Input = {
+  down: false, lastX: 0, id: null,
+  init(cv) {
+    cv.addEventListener('pointerdown', e => {
+      Audio.unlock();
+      this.down = true; this.lastX = e.clientX; this.id = e.pointerId;
+      try { cv.setPointerCapture(e.pointerId); } catch (er) {}
+    });
+    cv.addEventListener('pointermove', e => {
+      if (!this.down || e.pointerId !== this.id) return;
+      const dx = e.clientX - this.lastX; this.lastX = e.clientX;
+      Game.drag(dx);
+    });
+    const up = e => { if (e.pointerId === this.id) this.down = false; };
+    cv.addEventListener('pointerup', up);
+    cv.addEventListener('pointercancel', up);
+    cv.addEventListener('lostpointercapture', up);
+    const stop = e => e.preventDefault();
+    document.addEventListener('contextmenu', stop);
+    document.addEventListener('gesturestart', stop);
+    document.addEventListener('dblclick', stop);
+    document.addEventListener('touchmove', stop, { passive: false });
+    document.addEventListener('selectstart', stop);
+  }
+};
+
+/* ============================ UI ============================ */
+const UI = {
+  $: id => document.getElementById(id),
+  init() {
+    const on = (id, fn) => this.$(id).addEventListener('click', () => { Audio.unlock(); fn(); });
+    on('bGo', () => Game.start(Storage.data.level));
+    on('bResume', () => Game.resume());
+    on('bMenu', () => Game.toMenu());
+    on('bMenu2', () => Game.toMenu());
+    on('bNext', () => Game.start(Game.levelN + 1));
+    on('bRetry', () => Game.start(Game.levelN));
+    on('bPause', () => Game.pause());
+    on('bSnd', () => {
+      Storage.data.muted = !Storage.data.muted;
+      Audio.setMuted(Storage.data.muted); Storage.save(); this.sndIcon();
+    });
+  },
+  screen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === id)); },
+  hud(on) { this.$('hud').classList.toggle('on', on); },
+  level(n) { this.$('lvl').textContent = 'Ур. ' + n; },
+  progress(p) { this.$('prog').firstElementChild.style.width = (clamp(p, 0, 1) * 100).toFixed(1) + '%'; },
+  sndIcon() {
+    const m = Storage.data.muted;
+    this.$('bSnd').innerHTML = '<svg viewBox="0 0 24 24"><path d="M3 9h4l5-4v14l-5-4H3z" fill="currentColor"/>' +
+      (m ? '<path d="M15 9l6 6M21 9l-6 6" stroke="currentColor" stroke-width="2.4" fill="none" stroke-linecap="square"/>'
+         : '<path d="M15 8.5c1.6 2 1.6 5 0 7M18 6c3 3.5 3 8.5 0 12" stroke="currentColor" stroke-width="2.4" fill="none"/>') + '</svg>';
+  },
+  startInfo() {
+    const d = Storage.data;
+    this.$('startRec').textContent = 'Рекорд: ' + fmt(d.best) + ' · Уровень ' + d.level;
+  },
+  result(n, score, best, isRec) {
+    this.$('resCap').textContent = 'Уровень ' + n + ' пройден';
+    this.$('resNum').textContent = fmt(score);
+    this.$('resUnit').textContent = plural(score, ['голова', 'головы', 'голов']);
+    this.$('resNew').classList.toggle('on', isRec);
+    this.$('resRec').textContent = 'Рекорд: ' + fmt(best);
+    this.screen('result');
+  },
+  lose(n) { this.$('loseCap').textContent = 'Уровень ' + n; this.screen('lose'); }
+};
+
+/* ============================ Game ============================ */
+const Game = {
+  state: 'menu', levelN: 1, lvl: null,
+  finale: { on: false, k: 0, score: 0 },
+  ending: null, endT: 0, t: 0, gt: 0, acc: 0, last: 0,
+  init() {
+    Herd.reset(10);
+    requestAnimationFrame(ts => { this.last = ts; this.loop(ts); });
+  },
+  start(n) {
+    this.levelN = Math.max(1, n | 0);
+    this.lvl = LevelGenerator.make(this.levelN);
+    Herd.reset(10);
+    FX.clear();
+    this.finale = { on: false, k: 0, score: 0 };
+    this.ending = null; this.endT = 0; this.acc = 0;
+    this.state = 'play';
+    UI.screen(null); UI.hud(true); UI.level(this.levelN); UI.progress(0);
+  },
+  pause() {
+    if (this.state !== 'play') return;
+    this.state = 'pause'; UI.screen('pause');
+  },
+  resume() {
+    if (this.state !== 'pause') return;
+    this.state = 'play'; this.acc = 0; UI.screen(null);
+  },
+  toMenu() {
+    this.state = 'menu'; UI.hud(false); UI.startInfo(); UI.screen('start');
+  },
+  drag(dx) {
+    if (this.state !== 'play' || this.ending === 'lose') return;
+    Herd.tx = clamp(Herd.tx + dx * (2 * W) / (Renderer.PW * 0.85), -W + 0.8, W - 0.8);
+  },
+  loop(ts) {
+    const dt = Math.min(0.1, Math.max(0, (ts - this.last) / 1000));
+    this.last = ts; this.t += dt;
+    if (this.state === 'play') {
+      this.acc += dt;
+      let k = 0;
+      while (this.acc >= STEP && k < 6) { this.update(STEP); this.acc -= STEP; k++; }
+      if (k === 6) this.acc = 0;
+      Audio.hooves(this.ending ? 0 : Herd.n, this.finale.on);
+      if (this.lvl) UI.progress(Herd.z / (this.lvl.riverZ - 3));
+    } else if (this.state === 'result' || this.state === 'lose') {
+      FX.update(dt);
+    }
+    if (this.state === 'menu') Renderer.drawMenu(this.t);
+    else Renderer.drawWorld(this.gt);
+    requestAnimationFrame(t => this.loop(t));
+  },
+  update(dt) {
+    const L = this.lvl, f = this.finale;
+    this.gt += dt;
+    const speed = f.on ? 7 : L.speed;
+    Herd.update(dt, speed, L);
+    if (Herd.z > L.riverZ - 3) Herd.z = L.riverZ - 3;
+
+    // ворота
+    for (const gp of L.gates) {
+      if (gp.done || Herd.z < gp.z) continue;
+      gp.done = true;
+      if (Herd.n <= 0) continue;
+      const side = Herd.x < 0 ? 0 : 1, o = gp.opt[side];
+      gp.chosen = side;
+      const before = Herd.n;
+      Herd.n = applyOp(o, Herd.n); Herd.loss = 0;
+      const good = o.op === '+' || o.op === '×';
+      const d = Herd.n - before;
+      FX.pop((d >= 0 ? '+' : '−') + fmt(Math.abs(d)), !good);
+      if (good) Audio.neigh(); else Audio.thud();
+      Telegram.haptic('light');
+    }
+    // овраги
+    const hs = Herd.horses;
+    for (const r of L.ravines) {
+      if (r.z1 < Herd.z - 8 || r.z0 > Herd.z + 8) continue;
+      for (let i = hs.length - 1; i >= 0; i--) {
+        const h = hs[i], Z = Herd.z + h.rz;
+        if (Z >= r.z0 && Z <= r.z1 && h.x >= r.x0 && h.x <= r.x1) {
+          if (!r.cap) r.cap = Math.max(3, Math.round(hs.length * 0.4));
+          if (r.kills >= r.cap) continue;
+          r.kills = (r.kills || 0) + 1;
+          Herd.kill(i, 'fall', 0);
+          if (!r.hit) { r.hit = true; Audio.hit(); Telegram.haptic('heavy'); }
+        }
+      }
+    }
+    // перекати-поле
+    for (const t of L.tumbles) {
+      if (t.dead) { t.fade = Math.max(0, t.fade - dt * 2.5); }
+      t.x += t.vx * dt;
+      if (t.x > W + 0.6) { t.x = W + 0.6; t.vx = -Math.abs(t.vx); }
+      else if (t.x < -W - 0.6) { t.x = -W - 0.6; t.vx = Math.abs(t.vx); }
+      t.rot += t.vx * dt / t.r;
+      if (t.dead) continue;
+      const dz = t.z - Herd.z;
+      if (dz < -8 || dz > 8) continue;
+      const rr = (t.r + 0.32) * (t.r + 0.32);
+      for (let i = hs.length - 1; i >= 0; i--) {
+        const h = hs[i], ex = h.x - t.x, ez = Herd.z + h.rz - t.z;
+        if (ex * ex + ez * ez < rr) {
+          if (!t.cap) t.cap = Math.max(4, Math.round(hs.length * 0.22));
+          Herd.kill(i, 'fly', Math.sign(t.vx) || 1);
+          t.hits++;
+          if (!t.hit) { t.hit = true; Audio.hit(); Telegram.haptic('heavy'); }
+          if (t.hits >= t.cap) { t.dead = true; break; }
+        }
+      }
+    }
+    // вращающиеся жерди
+    for (const p of L.poles) {
+      p.ang += p.w * dt;
+      const dz = p.z - Herd.z;
+      if (dz < -8 || dz > 8 || (p.cap && p.hits >= p.cap)) continue;
+      const cs = Math.cos(p.ang) * p.len, sn = Math.sin(p.ang) * p.len;
+      const ax = p.x - cs, az = p.z - sn, bx = 2 * cs, bz = 2 * sn, l2 = bx * bx + bz * bz;
+      for (let i = hs.length - 1; i >= 0; i--) {
+        const h = hs[i], hx = h.x - ax, hz = Herd.z + h.rz - az;
+        const u = clamp((hx * bx + hz * bz) / l2, 0, 1);
+        const qx = hx - bx * u, qz = hz - bz * u;
+        if (qx * qx + qz * qz < 0.16) {
+          if (!p.cap) p.cap = Math.max(4, Math.round(hs.length * 0.22));
+          Herd.kill(i, 'fly', Math.sign(h.x - p.x) || 1);
+          p.hits++;
+          if (!p.hit) { p.hit = true; Audio.hit(); Telegram.haptic('heavy'); }
+          if (p.hits >= p.cap) break;
+        }
+      }
+    }
+    // чужие табуны
+    let fighting = false;
+    for (const e of L.enemies) {
+      if (e.state === 'gone') continue;
+      const er = 0.3 * Math.sqrt(Math.min(e.m, 60)) + 0.4, hr = Herd.radius();
+      const ahead = e.z - Herd.z;
+      if (e.state === 'idle') {
+        if (ahead < 90) e.z -= ES * dt;
+        // чужой табун присматривается и подворачивает к нашему
+        if (ahead < 40 && ahead > hr + er) {
+          const dx = Herd.x - e.x, hunt = (0.4 + 0.07 * Math.min(this.levelN, 12)) * dt;
+          e.x = clamp(e.x + clamp(dx, -hunt, hunt), -W + er * 0.6, W - er * 0.6);
+        }
+        if (Herd.n > 0 && !f.on && ahead < hr * 0.9 + er && ahead > -hr && Math.abs(e.x - Herd.x) < hr + er - 0.2) {
+          e.state = 'fight'; Audio.hit(); Telegram.haptic('heavy');
+        }
+        if (ahead < -CAMD - 4) e.state = 'gone';
+      }
+      if (e.state === 'fight') {
+        fighting = true;
+        e.z = Herd.z + hr * 0.85 + er * 0.7;
+        e.x += (Herd.x - e.x) * Math.min(1, dt * 3);
+        e.acc += dt;
+        while (e.acc >= 1 / 30) {
+          e.acc -= 1 / 30;
+          const k = Math.min(e.m, Herd.n, Math.max(1, Math.ceil(Math.min(Herd.n, e.m) / 18)));
+          e.m -= k; Herd.n -= k;
+          if (e.m <= 0 || Herd.n <= 0) { e.state = 'gone'; break; }
+        }
+        if (e.state === 'gone' && Herd.n > 0) FX.pop('Отбились!', false);
+      }
+      const vis = Math.min(Math.max(e.m, 0), 60);
+      while (e.vis > vis) {
+        e.vis--;
+        FX.horse(e.x + e.sx[e.vis], e.z + e.sz[e.vis], 'clash', 0, null, true);
+      }
+    }
+    Herd.removeKind = f.on ? 'stay' : (fighting ? 'clash' : 'scatter');
+    Herd.sync();
+    FX.update(dt);
+
+    // финал: водопой
+    if (!f.on && Herd.z >= L.L && Herd.n > 0) f.on = true;
+    if (f.on && !this.ending) {
+      while (f.k < 5 && Herd.n > 0 && Herd.z >= L.stepZ(f.k + 1) + 1.5) {
+        f.k++;
+        const cost = f.k < 5 ? L.costs[f.k - 1] : Herd.n;
+        const d = Math.min(cost, Herd.n);
+        Herd.n -= d; f.score += d * f.k;
+        FX.pop('×' + f.k + ' · ' + fmt(d * f.k), false);
+        Audio.step(f.k); Telegram.haptic('light');
+      }
+      if (Herd.n <= 0 || Herd.z >= L.riverZ - 3.05) {
+        if (Herd.n > 0) { f.score += Herd.n * Math.max(1, f.k); Herd.n = 0; }
+        this.ending = 'win'; this.endT = 1.6;
+        Herd.removeKind = 'stay'; Herd.sync();
+        for (let i = 0; i < 22; i++) FX.drop((Math.random() - 0.5) * 2 * W, L.riverZ + 0.3);
+        Audio.splash(); Telegram.haptic('success');
+      }
+    }
+    if (!f.on && !this.ending && Herd.n <= 0) {
+      this.ending = 'lose'; this.endT = 1.0;
+      Audio.fail(); Telegram.haptic('error');
+    }
+    if (this.ending) {
+      this.endT -= dt;
+      if (this.endT <= 0) this.finish();
+    }
+  },
+  finish() {
+    UI.hud(false);
+    if (this.ending === 'win') {
+      const sc = this.finale.score, d = Storage.data;
+      const isRec = sc > d.best;
+      if (isRec) d.best = sc;
+      d.level = Math.max(d.level, this.levelN + 1);
+      Storage.save();
+      this.state = 'result';
+      UI.result(this.levelN, sc, d.best, isRec);
+    } else {
+      this.state = 'lose';
+      UI.lose(this.levelN);
+    }
+    this.ending = null;
+  }
+};
+
+/* ============================ Boot ============================ */
+function boot() {
+  Theme.read();
+  Renderer.init(document.getElementById('c'));
+  Telegram.init();
+  if (Telegram.inTg) Theme.set(Telegram.dark());
+  Theme.ready = true;
+  HorseSprites.build();
+  Renderer.buildStatic();
+  Input.init(document.getElementById('c'));
+  UI.init();
+  UI.sndIcon(); UI.startInfo();
+  Storage.load(() => {
+    Audio.setMuted(Storage.data.muted);
+    UI.sndIcon(); UI.startInfo();
+  });
+  window.addEventListener('resize', () => Renderer.resize());
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) { Game.pause(); Audio.suspend(); }
+  });
+  Game.init();
+}
+boot();
+})();
+</script>
+</body>
+</html>
